@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة البيان - الإصدار الذهبي المستقر</title>
+    <title>منصة البيان - نسخة الإنقاذ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -11,19 +11,19 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&display=swap');
-        body { font-family: 'Noto Sans Arabic', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Noto Sans Arabic', sans-serif; background-color: #f0f4f8; margin: 0; }
         .font-serif { font-family: 'Amiri', serif; }
-        .word-btn { 
-            cursor: pointer; 
-            display: inline-block; 
-            padding: 2px 6px; 
-            margin: 2px;
-            border-radius: 8px;
-            transition: all 0.2s;
+        .clickable-word {
+            display: inline-block;
+            cursor: pointer;
+            padding: 2px 4px;
+            margin: 0 2px;
+            border-radius: 6px;
+            transition: 0.2s;
         }
-        .word-btn:hover { background-color: #e0e7ff; color: #4f46e5; transform: translateY(-2px); }
-        .active-word { background-color: #4f46e5 !important; color: white !important; shadow: 0 4px 6px rgba(79, 70, 229, 0.3); }
-        .sentence-box { line-height: 2.8; }
+        .clickable-word:hover { background: #e2e8f0; color: #2563eb; }
+        .active-word { background: #2563eb !important; color: white !important; }
+        .text-container { line-height: 2.5; }
     </style>
 </head>
 <body>
@@ -32,27 +32,26 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        const MASTER_DATA = {
-            "العربية": { en: "Arabic", info: "لغة سامية عريقة.", ex: "نحن نحب اللغة العربية." },
-            "لغة": { en: "Language", info: "وسيلة التواصل.", ex: "اللغة جسر بين الشعوب." },
-            "عريقة": { en: "Ancient", info: "لها تاريخ طويل وأصيل.", ex: "هذه قلعة عريقة." },
-            "جميلة": { en: "Beautiful", info: "تسر الناظرين والسامعين.", ex: "الحديقة جميلة جداً." },
-            "تمتاز": { en: "Featured", info: "تتفرد بصفات خاصة.", ex: "تمتاز الجمال بالصبر." },
-            "ببلاغتها": { en: "Eloquence", info: "الفصاحة وقوة التأثير.", ex: "سحرني الخطيب ببلاغته." },
-            "اتساع": { en: "Vastness", info: "كثرة المدى والخيارات.", ex: "أعجبني اتساع الأفق." },
-            "مفرداتها": { en: "Vocabulary", info: "كلمات اللغة.", ex: "مفردات الكتاب سهلة." },
-            "يتعلمها": { en: "Learning it", info: "اكتساب المعرفة بها.", ex: "يتعلمها الطالب المجتهد." },
-            "الطلاب": { en: "Students", info: "من يطلبون العلم.", ex: "الطلاب في المدرسة." },
-            "لفهم": { en: "To Understand", info: "إدراك المعاني.", ex: "نقرأ لفهم الواقع." },
-            "التراث": { en: "Heritage", info: "ما تركه لنا الأجداد.", ex: "تراثنا فخر لنا." },
-            "الأدبي": { en: "Literary", info: "مرتبط بالشعر والنثر.", ex: "كتاب أدبي رائع." },
-            "والثقافي": { en: "Cultural", info: "مرتبط بالوعي والفكر.", ex: "وعي ثقافي متميز." }
+        const DICT = {
+            "العربية": { en: "Arabic", info: "لغة عريقة وأصيلة." },
+            "لغة": { en: "Language", info: "نظام للتواصل." },
+            "عريقة": { en: "Ancient", info: "تاريخها قديم جداً." },
+            "جميلة": { en: "Beautiful", info: "تسر من يسمعها." },
+            "تمتاز": { en: "Characterized", info: "لها ميزات خاصة." },
+            "ببلاغتها": { en: "Eloquence", info: "قوة وفصاحة الكلام." },
+            "اتساع": { en: "Vastness", info: "كبر الحجم والمدى." },
+            "مفرداتها": { en: "Vocabulary", info: "كلمات اللغة." },
+            "يتعلمها": { en: "Learning it", info: "يدرسها ليكتسبها." },
+            "الطلاب": { en: "Students", info: "من يطلبون العلم." },
+            "لفهم": { en: "To understand", info: "لإدراك المعاني." },
+            "التراث": { en: "Heritage", info: "ما تركه لنا الأجداد." },
+            "الأدبي": { en: "Literary", info: "مرتبط بفن الأدب." },
+            "والثقافي": { en: "Cultural", info: "مرتبط بالوعي العام." }
         };
 
         const App = () => {
-            const [view, setView] = useState('reader');
             const [selected, setSelected] = useState(null);
-            const [isReadingAll, setIsReadingAll] = useState(false);
+            const [isSpeaking, setIsSpeaking] = useState(false);
 
             const sentences = [
                 "العَرَبِيَّةُ لُغَةٌ عَرِيقَةٌ وَجَمِيلَةٌ.",
@@ -60,63 +59,43 @@
                 "يَتَعَلَّمُهَا الطُّلَّابُ لِفَهْمِ التُّرَاثِ الْأَدَبِيِّ وَالثَّقَافِيِّ."
             ];
 
-            const speak = (text, callback = () => {}) => {
+            const speak = (txt) => {
                 if (!window.speechSynthesis) return;
                 window.speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance(text);
+                const utter = new SpeechSynthesisUtterance(txt);
                 utter.lang = 'ar-SA';
-                utterance.rate = 0.85;
-                utter.onend = callback;
+                utter.rate = 0.9;
                 window.speechSynthesis.speak(utter);
             };
 
-            const readFull = async () => {
-                if (isReadingAll) {
-                    window.speechSynthesis.cancel();
-                    setIsReadingAll(false);
-                    return;
-                }
-                setIsReadingAll(true);
-                for (let i = 0; i < sentences.length; i++) {
-                    if (window.speechSynthesis.paused) break;
-                    await new Promise(r => speak(sentences[i], r));
-                }
-                setIsReadingAll(false);
-            };
-
-            const handleWord = (word) => {
+            const handleWordClick = (word) => {
                 const clean = word.replace(/[^\u0621-\u064A]/g, '');
                 setSelected(clean);
-                speak(clean);
+                speak(word);
             };
 
-            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [selected, view]);
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            }, [selected]);
 
             return (
-                <div className="flex h-screen bg-slate-100" dir="rtl">
-                    {/* Nav */}
-                    <nav className="w-20 bg-slate-900 flex flex-col items-center py-8 space-y-8 shadow-xl">
-                        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/30">ب</div>
-                        <button onClick={() => setView('reader')} className={`p-3 rounded-xl transition ${view === 'reader' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-white'}`}><i data-lucide="book-open"></i></button>
-                        <button onClick={() => setView('quiz')} className={`p-3 rounded-xl transition ${view === 'quiz' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-white'}`}><i data-lucide="award"></i></button>
-                    </nav>
+                <div className="flex h-screen bg-slate-50" dir="rtl">
+                    {/* Sidebar Nav */}
+                    <div className="w-16 bg-slate-900 flex flex-col items-center py-6 space-y-6 shadow-2xl">
+                        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">ب</div>
+                        <i data-lucide="book-open" className="text-blue-500"></i>
+                    </div>
 
-                    {/* Main */}
-                    <main className="flex-1 flex flex-col p-8 overflow-hidden">
-                        <header className="mb-8 flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-200/50">
-                            <div>
-                                <h1 className="text-2xl font-black text-slate-800">مَنْصَّةُ البَيَانِ</h1>
-                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">إصدار الثبات الفائق</p>
-                            </div>
-                            <button onClick={readFull} className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition shadow-md active:scale-95 ${isReadingAll ? 'bg-rose-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
-                                <i data-lucide={isReadingAll ? "square" : "play-circle"}></i>
-                                {isReadingAll ? "إيقاف" : "استماع للنص"}
-                            </button>
+                    {/* Main Content */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <header className="h-16 bg-white border-b flex items-center px-8 shadow-sm">
+                            <h1 className="font-bold text-slate-800">البيان - القراءة الذكية</h1>
                         </header>
 
-                        <div className="flex-1 bg-white rounded-[3rem] shadow-sm border border-slate-200/50 p-12 overflow-y-auto">
-                            {view === 'reader' ? (
-                                <div className="max-w-3xl mx-auto sentence-box text-4xl font-serif text-slate-800">
+                        <div className="flex-1 p-10 overflow-auto">
+                            <div className="max-w-3xl mx-auto bg-white p-12 rounded-3xl shadow-sm border border-slate-100">
+                                <p className="text-xs font-bold text-slate-400 mb-6 uppercase tracking-widest">النص التفاعلي</p>
+                                <div className="text-container text-4xl font-serif text-slate-800">
                                     {sentences.map((s, si) => (
                                         <div key={si} className="mb-4">
                                             {s.split(' ').map((w, wi) => {
@@ -124,8 +103,8 @@
                                                 return (
                                                     <span 
                                                         key={wi} 
-                                                        onClick={() => handleWord(w)}
-                                                        className={`word-btn ${selected === clean ? 'active-word' : ''}`}
+                                                        onClick={() => handleWordClick(w)}
+                                                        className={`clickable-word ${selected === clean ? 'active-word shadow-lg' : ''}`}
                                                     >
                                                         {w}
                                                     </span>
@@ -134,45 +113,39 @@
                                         </div>
                                     ))}
                                 </div>
-                            ) : (
-                                <div className="max-w-md mx-auto py-10 text-center space-y-8">
-                                    <div className="bg-indigo-50 p-10 rounded-[3rem] border-2 border-indigo-100">
-                                        <h2 className="text-xl font-bold mb-4">ما معنى كلمة "عَرِيقة"؟</h2>
-                                        <div className="space-y-3">
-                                            <button onClick={() => alert("أحسنت!")} className="w-full p-4 bg-white border rounded-2xl hover:bg-indigo-600 hover:text-white transition font-bold shadow-sm">Ancient</button>
-                                            <button onClick={() => alert("حاول مرة أخرى")} className="w-full p-4 bg-white border rounded-2xl hover:bg-indigo-600 hover:text-white transition font-bold shadow-sm">Small</button>
-                                            <button onClick={() => alert("حاول مرة أخرى")} className="w-full p-4 bg-white border rounded-2xl hover:bg-indigo-600 hover:text-white transition font-bold shadow-sm">Fast</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            </div>
                         </div>
-                    </main>
+                    </div>
 
-                    {/* Sidebar */}
-                    <aside className="w-80 bg-white border-r p-8 shadow-2xl flex flex-col">
-                        {selected && MASTER_DATA[selected] ? (
-                            <div className="space-y-8 animate-in slide-in-from-right duration-300">
-                                <h2 className="text-5xl font-serif font-bold text-slate-900 border-b-4 border-indigo-100 pb-2">{selected}</h2>
-                                <div className="bg-indigo-600 text-white p-6 rounded-[2rem] shadow-lg">
-                                    <p className="text-[10px] uppercase opacity-70 mb-1 font-bold">الترجمة</p>
-                                    <p className="text-3xl font-bold">{MASTER_DATA[selected].en}</p>
-                                </div>
-                                <div className="space-y-4">
-                                    <p className="text-xs text-slate-400 font-bold uppercase">تفسير الكلمة</p>
-                                    <p className="text-xl text-slate-700 leading-relaxed font-medium">{MASTER_DATA[selected].info}</p>
-                                </div>
-                                <div className="bg-amber-50 p-5 rounded-2xl border-r-4 border-amber-400 italic text-slate-600">
-                                    "{MASTER_DATA[selected].ex}"
+                    {/* Info Sidebar */}
+                    <div className="w-80 bg-white border-r p-8 shadow-xl">
+                        {selected && DICT[selected] ? (
+                            <div className="animate-in fade-in duration-300">
+                                <h2 className="text-4xl font-serif font-bold text-slate-900 border-b-2 border-blue-100 pb-2 mb-6">{selected}</h2>
+                                <div className="space-y-6">
+                                    <div className="bg-blue-600 text-white p-6 rounded-2xl">
+                                        <p className="text-[10px] opacity-70 uppercase font-bold mb-1">الترجمة</p>
+                                        <p className="text-2xl font-bold">{DICT[selected].en}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">المعنى</p>
+                                        <p className="text-lg text-slate-700 leading-relaxed">{DICT[selected].info}</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => speak(selected)}
+                                        className="w-full py-3 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center gap-2 text-slate-600 font-bold transition"
+                                    >
+                                        <i data-lucide="volume-2" className="w-4 h-4"></i> استماع للكلمة
+                                    </button>
                                 </div>
                             </div>
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-slate-300 text-center italic">
-                                <i data-lucide="mouse-pointer-2" className="w-12 h-12 mb-4 opacity-20"></i>
-                                <p>اضغط على أي كلمة<br/>لترى سحر اللغة</p>
+                            <div className="h-full flex flex-col items-center justify-center text-slate-300 text-center">
+                                <i data-lucide="info" className="w-10 h-10 mb-4 opacity-20"></i>
+                                <p>اضغط على أي كلمة<br/>ليظهر لك معناها وصوتها</p>
                             </div>
                         )}
-                    </aside>
+                    </div>
                 </div>
             );
         };
