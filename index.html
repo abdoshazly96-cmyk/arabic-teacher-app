@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة البيان الاحترافية</title>
+    <title>منصة البيان - النظام المتكامل</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -11,93 +11,98 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Sans+Arabic:wght@300;400;700&display=swap');
-        body { font-family: 'Noto Sans Arabic', sans-serif; }
+        body { font-family: 'Noto Sans Arabic', sans-serif; background-color: #f8fafc; }
         .font-serif { font-family: 'Amiri', serif; }
-        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
-        .word-card:hover { transform: translateY(-5px); transition: all 0.3s ease; }
-        .active-sentence { background: #fef3c7; border-radius: 12px; transition: all 0.4s; }
+        .active-sentence { background-color: #fef3c7; border-radius: 12px; transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .word-clickable:hover { color: #4f46e5; cursor: pointer; text-decoration: underline; text-underline-offset: 8px; }
+        .active-word { color: #4f46e5; font-weight: bold; border-bottom: 2px solid #4f46e5; }
     </style>
 </head>
-<body class="bg-slate-50">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- إعدادات الذكاء الاصطناعي ---
-        const apiKey = ""; // سيتم تزويده من البيئة تلقائياً
-        const MODEL = "gemini-2.5-flash-preview-09-2025";
+        const initialDictionary = {
+            "العربية": { tr: "Arabic", mean: "لغة عالمية سامية، لغة الضاد.", ex: "اللغة العربية بحر من الجمال." },
+            "لغة": { tr: "Language", mean: "وسيلة التواصل بين البشر.", ex: "كل شعب له لغة تميزه." },
+            "عريقة": { tr: "Ancient", mean: "شيء له جذور تاريخية وأصيلة.", ex: "نحن نمتلك حضارة عريقة." },
+            "جميلة": { tr: "Beautiful", mean: "وصف للشيء الحسن والمبهج.", ex: "هذه قصيدة جميلة جداً." },
+            "تمتاز": { tr: "Distinguished", mean: "الاتصاف بخصائص متفوقة.", ex: "تمتاز الجمال بالصبر." },
+            "ببلاغتها": { tr: "Eloquence", mean: "القدرة على إيصال المعنى بوضوح وتأثير.", ex: "اشتهر العرب ببلاغتهم." },
+            "اتساع": { tr: "Vastness", mean: "كبر المساحة أو رحابة المحتوى.", ex: "يدهشنا اتساع هذا البحر." },
+            "مفرداتها": { tr: "Vocabulary", mean: "الكلمات التي تتركب منها اللغة.", ex: "يجب إثراء مفردات الطالب." }
+        };
 
         const App = () => {
-            const [activeTab, setActiveTab] = useState('reader');
-            const [text, setText] = useState("العَرَبِيَّةُ لُغَةٌ عَرِيقَةٌ وَجَمِيلَةٌ، تَمْتَازُ بِبَلَاغَتِهَا وَاتِّسَاعِ مُفْرَدَاتِهَا.");
+            const [view, setView] = useState('reader');
             const [selectedWord, setSelectedWord] = useState(null);
-            const [analysis, setAnalysis] = useState(null);
             const [savedWords, setSavedWords] = useState([]);
-            const [loading, setLoading] = useState(false);
+            const [isReadingAll, setIsReadingAll] = useState(false);
+            const [currentSentenceIdx, setCurrentSentenceIdx] = useState(-1);
             const [score, setScore] = useState(0);
 
-            // وظيفة النطق المتقدمة
-            const speak = (content) => {
+            const fullText = "العَرَبِيَّةُ لُغَةٌ عَرِيقَةٌ وَجَمِيلَةٌ. تَمْتَازُ بِبَلَاغَتِهَا وَاتِّسَاعِ مُفْرَدَاتِهَا.";
+            const sentences = fullText.split(/(?<=[.؟!])\s+/);
+
+            const speak = (txt, onEnd = () => {}) => {
+                if (!('speechSynthesis' in window)) return;
                 window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(content);
-                u.lang = 'ar-SA';
-                u.rate = 0.85;
-                window.speechSynthesis.speak(u);
+                const msg = new SpeechSynthesisUtterance(txt);
+                msg.lang = 'ar-SA';
+                msg.rate = 0.85;
+                msg.onend = onEnd;
+                window.speechSynthesis.speak(msg);
             };
 
-            // تحليل الكلمة باستخدام الذكاء الاصطناعي Gemini
-            const analyzeWord = async (word) => {
-                const cleanWord = word.replace(/[^\u0621-\u064A]/g, '');
-                if (!cleanWord) return;
-                
-                setSelectedWord(cleanWord);
-                setLoading(true);
+            const readFullText = async () => {
+                if (isReadingAll) {
+                    window.speechSynthesis.cancel();
+                    setIsReadingAll(false);
+                    setCurrentSentenceIdx(-1);
+                    return;
+                }
 
-                try {
-                    const prompt = `Analyze the Arabic word "${cleanWord}". Provide: 1. English Translation, 2. Arabic Meaning (brief), 3. An example sentence in Arabic. Return strictly as JSON: {"translation": "...", "meaning": "...", "example": "..."}`;
-                    
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: prompt }] }],
-                            generationConfig: { responseMimeType: "application/json" }
-                        })
-                    });
+                setIsReadingAll(true);
+                for (let i = 0; i < sentences.length; i++) {
+                    setCurrentSentenceIdx(i);
+                    await new Promise(resolve => speak(sentences[i], resolve));
+                    if (!window.speechSynthesis.speaking && i === sentences.length - 1) break;
+                }
+                setIsReadingAll(false);
+                setCurrentSentenceIdx(-1);
+            };
 
-                    const data = await response.json();
-                    const result = JSON.parse(data.candidates[0].content.parts[0].text);
-                    setAnalysis(result);
-
-                    // حفظ الكلمة تلقائياً في القاموس
-                    setSavedWords(prev => {
-                        if (prev.find(w => w.word === cleanWord)) return prev;
-                        return [{ word: cleanWord, ...result }, ...prev];
-                    });
-                } catch (error) {
-                    console.error("AI Analysis Error:", error);
-                } finally {
-                    setLoading(false);
+            const handleWordClick = (word) => {
+                const clean = word.replace(/[^\u0621-\u064A]/g, '');
+                setSelectedWord(clean);
+                speak(clean);
+                if (initialDictionary[clean] && !savedWords.find(w => w.word === clean)) {
+                    setSavedWords([...savedWords, { word: clean, ...initialDictionary[clean] }]);
                 }
             };
 
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            }, [view, selectedWord]);
+
             return (
-                <div className="flex h-screen overflow-hidden" dir="rtl">
-                    {/* Sidebar */}
-                    <nav className="w-20 bg-slate-900 text-white flex flex-col items-center py-8 space-y-10 shadow-2xl">
-                        <div className="text-2xl font-bold bg-indigo-600 w-12 h-12 flex items-center justify-center rounded-2xl shadow-lg">ب</div>
-                        <button onClick={() => setActiveTab('reader')} className={`p-3 rounded-xl transition ${activeTab === 'reader' ? 'bg-indigo-600' : 'opacity-40 hover:opacity-100'}`}><i data-lucide="book-open"></i></button>
-                        <button onClick={() => setActiveTab('dictionary')} className={`p-3 rounded-xl transition ${activeTab === 'dictionary' ? 'bg-indigo-600' : 'opacity-40 hover:opacity-100'}`}><i data-lucide="languages"></i></button>
-                        <button onClick={() => setActiveTab('quiz')} className={`p-3 rounded-xl transition ${activeTab === 'quiz' ? 'bg-indigo-600' : 'opacity-40 hover:opacity-100'}`}><i data-lucide="brain"></i></button>
+                <div className="flex h-screen bg-slate-50 overflow-hidden" dir="rtl">
+                    {/* Sidebar Nav */}
+                    <nav className="w-20 bg-slate-900 text-white flex flex-col items-center py-8 space-y-10 shadow-2xl z-20">
+                        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center font-bold text-2xl shadow-lg">ب</div>
+                        <button onClick={() => setView('reader')} className={`p-3 rounded-xl transition-all ${view === 'reader' ? 'bg-indigo-600 shadow-indigo-500/50 shadow-lg' : 'opacity-40 hover:opacity-100'}`}><i data-lucide="book-open"></i></button>
+                        <button onClick={() => setView('dictionary')} className={`p-3 rounded-xl transition-all ${view === 'dictionary' ? 'bg-indigo-600 shadow-indigo-500/50 shadow-lg' : 'opacity-40 hover:opacity-100'}`}><i data-lucide="languages"></i></button>
+                        <button onClick={() => setView('quiz')} className={`p-3 rounded-xl transition-all ${view === 'quiz' ? 'bg-indigo-600 shadow-indigo-500/50 shadow-lg' : 'opacity-40 hover:opacity-100'}`}><i data-lucide="award"></i></button>
                     </nav>
 
-                    {/* Main Content */}
-                    <main className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
-                        <header className="h-20 bg-white border-b flex items-center justify-between px-10 shadow-sm z-10">
+                    {/* Main Content Area */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between shadow-sm">
                             <div>
                                 <h1 className="text-xl font-bold text-slate-800">منصة البيان الذكية</h1>
-                                <p className="text-xs text-slate-400">تحليل فوري بواسطة الذكاء الاصطناعي</p>
+                                <p className="text-xs text-slate-400">نظام القراءة والتفاعل الشامل</p>
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-full text-sm font-bold border border-indigo-100">
@@ -106,23 +111,32 @@
                             </div>
                         </header>
 
-                        <div className="flex-1 overflow-y-auto p-10">
-                            {activeTab === 'reader' && (
+                        <main className="flex-1 overflow-y-auto p-6 md:p-12">
+                            {view === 'reader' && (
                                 <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-                                    <div className="flex gap-4">
-                                        <button onClick={() => speak(text)} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 transition-all active:scale-95">
-                                            <i data-lucide="volume-2"></i> استماع للنص
+                                    <div className="flex items-center gap-4">
+                                        <button 
+                                            onClick={readFullText} 
+                                            className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-bold transition-all shadow-xl active:scale-95 ${isReadingAll ? 'bg-rose-500 text-white' : 'bg-indigo-600 text-white'}`}
+                                        >
+                                            <i data-lucide={isReadingAll ? "pause" : "play"}></i>
+                                            {isReadingAll ? "إيقاف القراءة" : "استماع للنص كاملاً"}
                                         </button>
                                     </div>
-                                    <div className="bg-white p-12 rounded-[3rem] shadow-2xl border border-slate-100 relative group">
-                                        <div className="text-4xl leading-[2.5] font-serif text-slate-800 text-right">
-                                            {text.split(' ').map((word, i) => (
-                                                <span 
-                                                    key={i} 
-                                                    onClick={() => analyzeWord(word)}
-                                                    className={`cursor-pointer px-1 rounded-lg transition-all hover:bg-indigo-50 hover:text-indigo-600 ${selectedWord === word.replace(/[^\u0621-\u064A]/g, '') ? 'bg-indigo-100 text-indigo-700 font-bold' : ''}`}
-                                                >
-                                                    {word}{' '}
+
+                                    <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-slate-100 relative overflow-hidden">
+                                        <div className="text-4xl leading-[2.8] font-serif text-slate-800">
+                                            {sentences.map((sentence, sIdx) => (
+                                                <span key={sIdx} className={`p-2 inline-block transition-all duration-500 ${currentSentenceIdx === sIdx ? 'active-sentence' : ''}`}>
+                                                    {sentence.split(' ').map((word, wIdx) => (
+                                                        <span 
+                                                            key={wIdx} 
+                                                            onClick={() => handleWordClick(word)}
+                                                            className={`word-clickable px-1 ${selectedWord === word.replace(/[^\u0621-\u064A]/g, '') ? 'active-word' : ''}`}
+                                                        >
+                                                            {word}{' '}
+                                                        </span>
+                                                    ))}
                                                 </span>
                                             ))}
                                         </div>
@@ -130,97 +144,80 @@
                                 </div>
                             )}
 
-                            {activeTab === 'dictionary' && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto animate-in slide-in-from-bottom-5">
+                            {view === 'dictionary' && (
+                                <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-5">
                                     {savedWords.length === 0 ? (
-                                        <div className="col-span-full py-20 text-center text-slate-300 font-bold border-4 border-dashed rounded-[3rem]">
-                                            <i data-lucide="search" className="w-16 h-16 mx-auto mb-4 opacity-20"></i>
-                                            <p>اضغط على الكلمات في القارئ لتحليلها وحفظها هنا</p>
+                                        <div className="col-span-full py-32 text-center text-slate-300 border-4 border-dashed rounded-[3rem]">
+                                            <i data-lucide="book-marked" className="w-16 h-16 mx-auto mb-4 opacity-20"></i>
+                                            <p className="text-xl font-bold italic">قاموسك الشخصي فارغ.. ابدأ بالضغط على الكلمات الصعبة في القارئ</p>
                                         </div>
                                     ) : savedWords.map((w, i) => (
-                                        <div key={i} className="word-card bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex justify-between items-start">
-                                            <div className="space-y-2">
+                                        <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-md hover:shadow-xl transition-all group">
+                                            <div className="flex justify-between items-start mb-4">
                                                 <h3 className="text-2xl font-bold font-serif text-slate-900">{w.word}</h3>
-                                                <p className="text-indigo-600 font-bold text-sm uppercase tracking-widest">{w.translation}</p>
-                                                <p className="text-slate-500 text-sm leading-relaxed">{w.meaning}</p>
-                                                <p className="text-xs italic text-slate-400 font-serif mt-2 border-r-2 border-indigo-200 pr-2">"{w.example}"</p>
+                                                <button onClick={() => speak(w.word)} className="p-2 bg-indigo-50 text-indigo-600 rounded-full group-hover:bg-indigo-600 group-hover:text-white transition-all"><i data-lucide="volume-2"></i></button>
                                             </div>
-                                            <button onClick={() => speak(w.word)} className="p-3 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-600 hover:text-white transition-all">
-                                                <i data-lucide="volume-2"></i>
-                                            </button>
+                                            <p className="text-indigo-600 font-bold text-sm mb-2 uppercase tracking-tighter">Translation: {w.tr}</p>
+                                            <p className="text-slate-500 text-sm mb-4 leading-relaxed">{w.mean}</p>
+                                            <div className="bg-slate-50 p-3 rounded-xl border-r-4 border-indigo-400">
+                                                <p className="text-xs italic font-serif text-slate-600">"{w.ex}"</p>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
 
-                            {activeTab === 'quiz' && (
-                                <div className="max-w-xl mx-auto py-10 text-center">
-                                    <div className="bg-white p-12 rounded-[3rem] shadow-2xl border border-slate-50">
-                                        <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"><i data-lucide="award"></i></div>
-                                        <h2 className="text-3xl font-bold text-slate-800 mb-2">تحدي الكلمات</h2>
-                                        <p className="text-slate-400 mb-8 italic">هل تتذكر ما تعلمته؟</p>
-                                        
+                            {view === 'quiz' && (
+                                <div className="max-w-xl mx-auto py-10">
+                                    <div className="bg-white p-12 rounded-[3rem] shadow-2xl border text-center relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-6 opacity-10"><i data-lucide="brain" className="w-20 h-20 text-indigo-900"></i></div>
+                                        <h2 className="text-3xl font-bold mb-8">اختبار المفردات</h2>
+                                        <p className="text-lg text-slate-600 mb-8 italic">ما هو المعنى الصحيح لكلمة <span className="text-indigo-600 font-bold">"ببلاغتها"</span>؟</p>
                                         <div className="space-y-4">
-                                            <div className="p-6 bg-slate-50 rounded-2xl border mb-6">
-                                                <p className="text-xl font-bold text-indigo-900 mb-2">"عريقة"</p>
-                                                <p className="text-sm text-slate-500 italic">اختر الترجمة الصحيحة</p>
-                                            </div>
-                                            {["Ancient", "Modern", "Beautiful"].map((opt, i) => (
-                                                <button key={i} onClick={() => { if(i===0) { setScore(score+10); alert("عبقري! إجابة صحيحة"); } else alert("للأسف، حاول مرة أخرى"); }} className="w-full p-4 border-2 rounded-2xl font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all text-slate-700">
+                                            {["Eloquence", "Speed", "Colors"].map((opt, i) => (
+                                                <button key={i} onClick={() => { if(i===0) { setScore(score+10); alert("أحسنت! إجابة دقيقة."); } else alert("للأسف، حاول مرة أخرى."); }} className="w-full p-5 border-2 rounded-2xl font-bold hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all text-slate-700 shadow-sm">
                                                     {opt}
                                                 </button>
                                             ))}
                                         </div>
-                                        <div className="mt-10 pt-6 border-t flex justify-between items-center text-indigo-600 font-bold">
-                                            <span>مجموع النقاط:</span>
-                                            <span className="text-2xl">{score}</span>
+                                        <div className="mt-12 pt-6 border-t flex justify-between items-center text-indigo-600 font-bold text-xl">
+                                            <span>رصيدك الحالي:</span>
+                                            <span>{score} نقطة</span>
                                         </div>
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    </main>
+                        </main>
+                    </div>
 
-                    {/* Side Panel (AI Analysis) */}
-                    <aside className="w-[400px] bg-white border-r shadow-2xl p-8 overflow-y-auto">
-                        {selectedWord ? (
+                    {/* Left Analysis Panel */}
+                    <aside className="w-[400px] bg-white border-r shadow-2xl p-8 overflow-y-auto hidden lg:block">
+                        {selectedWord && initialDictionary[selectedWord] ? (
                             <div className="space-y-8 animate-in slide-in-from-right duration-500">
                                 <div className="flex justify-between items-center">
                                     <h2 className="text-5xl font-bold font-serif text-slate-900">{selectedWord}</h2>
-                                    <button onClick={() => speak(selectedWord)} className="p-4 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 shadow-sm"><i data-lucide="volume-2"></i></button>
+                                    <button onClick={() => speak(selectedWord)} className="p-4 bg-indigo-50 text-indigo-600 rounded-full shadow-sm hover:bg-indigo-100 transition-all"><i data-lucide="volume-2"></i></button>
                                 </div>
-
-                                {loading ? (
-                                    <div className="py-20 text-center space-y-4">
-                                        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                                        <p className="text-indigo-600 font-bold animate-pulse">جاري التحليل بالذكاء الاصطناعي...</p>
+                                <div className="space-y-6">
+                                    <div className="bg-indigo-600 text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
+                                        <div className="absolute -bottom-4 -right-4 opacity-10 group-hover:scale-125 transition-transform"><i data-lucide="languages" className="w-24 h-24"></i></div>
+                                        <p className="text-[10px] font-bold opacity-60 mb-1 uppercase tracking-widest">English Translation</p>
+                                        <p className="text-4xl font-bold">{initialDictionary[selectedWord].tr}</p>
                                     </div>
-                                ) : analysis && (
-                                    <div className="space-y-6">
-                                        <div className="bg-indigo-600 text-white p-6 rounded-3xl shadow-xl transform rotate-1">
-                                            <p className="text-[10px] font-bold opacity-60 mb-1 uppercase tracking-widest">English Translation</p>
-                                            <p className="text-3xl font-bold">{analysis.translation}</p>
-                                        </div>
-                                        
-                                        <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                                            <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">المعنى بالعربية</p>
-                                            <p className="text-lg text-slate-700 leading-relaxed">{analysis.meaning}</p>
-                                        </div>
-
-                                        <div className="bg-amber-50 p-6 rounded-3xl border-r-8 border-amber-400">
-                                            <p className="text-xs font-bold text-amber-700 mb-2 uppercase tracking-widest">سياق الجملة</p>
-                                            <div className="flex justify-between items-start gap-3">
-                                                <p className="text-xl italic font-serif text-slate-600 leading-relaxed">"{analysis.example}"</p>
-                                                <button onClick={() => speak(analysis.example)} className="text-amber-600 p-1 hover:bg-amber-100 rounded-lg"><i data-lucide="volume-2" className="w-4 h-4"></i></button>
-                                            </div>
-                                        </div>
+                                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                                        <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">المعنى بالعربية</p>
+                                        <p className="text-xl text-slate-700 leading-relaxed font-medium">{initialDictionary[selectedWord].mean}</p>
                                     </div>
-                                )}
+                                    <div className="bg-amber-50 p-6 rounded-3xl border-r-8 border-amber-400">
+                                        <p className="text-xs font-bold text-amber-700 mb-2 uppercase tracking-widest">مثال تعليمي</p>
+                                        <p className="text-2xl italic font-serif text-slate-600 leading-relaxed">"{initialDictionary[selectedWord].ex}"</p>
+                                    </div>
+                                </div>
                             </div>
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-slate-300 text-center space-y-6 opacity-40">
-                                <div className="w-24 h-24 border-4 border-dashed rounded-full flex items-center justify-center"><i data-lucide="mouse-pointer-2" className="w-10 h-10"></i></div>
-                                <p className="font-bold text-lg leading-relaxed">اضغط على أي كلمة<br/>ليحللها الذكاء الاصطناعي فوراً</p>
+                                <i data-lucide="mouse-pointer-click" className="w-16 h-16"></i>
+                                <p className="font-bold text-lg">اضغط على أي كلمة<br/>لفتح القاموس الذكي فوراً</p>
                             </div>
                         )}
                     </aside>
@@ -230,11 +227,6 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-        
-        // تفعيل الأيقونات
-        setTimeout(() => {
-            if (window.lucide) window.lucide.createIcons();
-        }, 1000);
     </script>
 </body>
 </html>
