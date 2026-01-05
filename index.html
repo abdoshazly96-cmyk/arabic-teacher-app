@@ -1,157 +1,36 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة البيان - نسخة الإنقاذ</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&display=swap');
-        body { font-family: 'Noto Sans Arabic', sans-serif; background-color: #f0f4f8; margin: 0; }
-        .font-serif { font-family: 'Amiri', serif; }
-        .clickable-word {
-            display: inline-block;
-            cursor: pointer;
-            padding: 2px 4px;
-            margin: 0 2px;
-            border-radius: 6px;
-            transition: 0.2s;
-        }
-        .clickable-word:hover { background: #e2e8f0; color: #2563eb; }
-        .active-word { background: #2563eb !important; color: white !important; }
-        .text-container { line-height: 2.5; }
-    </style>
+  <meta charset="UTF-8">
+  <title>تعلم العربية للناطقين بغيرها</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background:#f9f9f9 }
+    .word { cursor: pointer; padding: 2px }
+    .highlight { background: yellow }
+    #panel { border-right: 2px solid #ddd; padding: 10px; width: 30% }
+  </style>
 </head>
 <body>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+<h2>نص القراءة</h2>
+<p id="text">
+  <span class="word">اللغة</span>
+  <span class="word">العربية</span>
+  <span class="word">لغة</span>
+  <span class="word">عريقة</span>
+</p>
 
-        const DICT = {
-            "العربية": { en: "Arabic", info: "لغة عريقة وأصيلة." },
-            "لغة": { en: "Language", info: "نظام للتواصل." },
-            "عريقة": { en: "Ancient", info: "تاريخها قديم جداً." },
-            "جميلة": { en: "Beautiful", info: "تسر من يسمعها." },
-            "تمتاز": { en: "Characterized", info: "لها ميزات خاصة." },
-            "ببلاغتها": { en: "Eloquence", info: "قوة وفصاحة الكلام." },
-            "اتساع": { en: "Vastness", info: "كبر الحجم والمدى." },
-            "مفرداتها": { en: "Vocabulary", info: "كلمات اللغة." },
-            "يتعلمها": { en: "Learning it", info: "يدرسها ليكتسبها." },
-            "الطلاب": { en: "Students", info: "من يطلبون العلم." },
-            "لفهم": { en: "To understand", info: "لإدراك المعاني." },
-            "التراث": { en: "Heritage", info: "ما تركه لنا الأجداد." },
-            "الأدبي": { en: "Literary", info: "مرتبط بفن الأدب." },
-            "والثقافي": { en: "Cultural", info: "مرتبط بالوعي العام." }
-        };
+<button onclick="playText()">▶ قراءة</button>
+<button onclick="pauseText()">⏸ إيقاف</button>
 
-        const App = () => {
-            const [selected, setSelected] = useState(null);
-            const [isSpeaking, setIsSpeaking] = useState(false);
+<hr>
 
-            const sentences = [
-                "العَرَبِيَّةُ لُغَةٌ عَرِيقَةٌ وَجَمِيلَةٌ.",
-                "تَمْتَازُ بِبَلَاغَتِهَا وَاتِّسَاعِ مُفْرَدَاتِهَا.",
-                "يَتَعَلَّمُهَا الطُّلَّابُ لِفَهْمِ التُّرَاثِ الْأَدَبِيِّ وَالثَّقَافِيِّ."
-            ];
+<h3>الكلمة المختارة</h3>
+<div id="panel">
+  <p id="word"></p>
+  <p id="translation"></p>
+</div>
 
-            const speak = (txt) => {
-                if (!window.speechSynthesis) return;
-                window.speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance(txt);
-                utter.lang = 'ar-SA';
-                utter.rate = 0.9;
-                window.speechSynthesis.speak(utter);
-            };
-
-            const handleWordClick = (word) => {
-                const clean = word.replace(/[^\u0621-\u064A]/g, '');
-                setSelected(clean);
-                speak(word);
-            };
-
-            useEffect(() => {
-                if (window.lucide) window.lucide.createIcons();
-            }, [selected]);
-
-            return (
-                <div className="flex h-screen bg-slate-50" dir="rtl">
-                    {/* Sidebar Nav */}
-                    <div className="w-16 bg-slate-900 flex flex-col items-center py-6 space-y-6 shadow-2xl">
-                        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">ب</div>
-                        <i data-lucide="book-open" className="text-blue-500"></i>
-                    </div>
-
-                    {/* Main Content */}
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                        <header className="h-16 bg-white border-b flex items-center px-8 shadow-sm">
-                            <h1 className="font-bold text-slate-800">البيان - القراءة الذكية</h1>
-                        </header>
-
-                        <div className="flex-1 p-10 overflow-auto">
-                            <div className="max-w-3xl mx-auto bg-white p-12 rounded-3xl shadow-sm border border-slate-100">
-                                <p className="text-xs font-bold text-slate-400 mb-6 uppercase tracking-widest">النص التفاعلي</p>
-                                <div className="text-container text-4xl font-serif text-slate-800">
-                                    {sentences.map((s, si) => (
-                                        <div key={si} className="mb-4">
-                                            {s.split(' ').map((w, wi) => {
-                                                const clean = w.replace(/[^\u0621-\u064A]/g, '');
-                                                return (
-                                                    <span 
-                                                        key={wi} 
-                                                        onClick={() => handleWordClick(w)}
-                                                        className={`clickable-word ${selected === clean ? 'active-word shadow-lg' : ''}`}
-                                                    >
-                                                        {w}
-                                                    </span>
-                                                );
-                                            })}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Info Sidebar */}
-                    <div className="w-80 bg-white border-r p-8 shadow-xl">
-                        {selected && DICT[selected] ? (
-                            <div className="animate-in fade-in duration-300">
-                                <h2 className="text-4xl font-serif font-bold text-slate-900 border-b-2 border-blue-100 pb-2 mb-6">{selected}</h2>
-                                <div className="space-y-6">
-                                    <div className="bg-blue-600 text-white p-6 rounded-2xl">
-                                        <p className="text-[10px] opacity-70 uppercase font-bold mb-1">الترجمة</p>
-                                        <p className="text-2xl font-bold">{DICT[selected].en}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">المعنى</p>
-                                        <p className="text-lg text-slate-700 leading-relaxed">{DICT[selected].info}</p>
-                                    </div>
-                                    <button 
-                                        onClick={() => speak(selected)}
-                                        className="w-full py-3 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center justify-center gap-2 text-slate-600 font-bold transition"
-                                    >
-                                        <i data-lucide="volume-2" className="w-4 h-4"></i> استماع للكلمة
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-slate-300 text-center">
-                                <i data-lucide="info" className="w-10 h-10 mb-4 opacity-20"></i>
-                                <p>اضغط على أي كلمة<br/>ليظهر لك معناها وصوتها</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+<script src="script.js"></script>
 </body>
 </html>
